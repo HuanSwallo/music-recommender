@@ -1,54 +1,39 @@
-import os
-import requests
-import cloudscraper
-from dotenv import load_dotenv
-from bs4 import BeautifulSoup
-from albumoftheyearapi import AOTY
+from lastfm import get_top_artists, get_heard_albums
+from aoty import get_releases_for_top_artists
+from recommender import score_releases, display_recommendations
 
-load_dotenv()
+USERNAME = "TinyTanBoi"
 
-api_key = os.getenv('LASTFM_API_KEY')
+def main():
+    print("=" * 50)
+    print("🎵 Album Recommender System")
+    print("=" * 50)
 
-def get_top_artists():
-    params = {
-        "method": "user.getTopArtists",
-        "user": "TinyTanBoi",
-        "api_key": api_key,
-        "format": "json"
-    }
+    # --- Step 1: Get Last.fm data ---
+    print(f"\n📡 Fetching Last.fm data for '{USERNAME}'...")
+    top_artists = get_top_artists(USERNAME)
+    heard_albums = get_heard_albums(USERNAME)
 
-    response = requests.get('http://ws.audioscrobbler.com/2.0/' , params=params)
-    response.raise_for_status()
-    data = response.json()
-    return [artist['name'] for artist in data['topartists']['artist'][:5]]
+    print(f"\n🎤 Your top {len(top_artists)} artists:")
+    for i, artist in enumerate(top_artists, 1):
+        print(f"  {i}. {artist}")
+    print(f"\n💿 Albums filtered out (already heard): {len(heard_albums)}")
 
-def get_artist_id(artist_name, scraper):
-    search_name = artist_name.lower().replace(' ', '+')
-    url = f'https://www.albumoftheyear.org/search/artists/?q={search_name}'
-    response = scraper.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-    artist_link = soup.find('a', href=lambda h: h and '/artist/' in h)
-    if not artist_link:
-        print(f"Could not find artist {artist_name} in search results")
-        return None
-    return artist_link['href'].split('/artist/')[1].strip('/')
+    # --- Step 2: Get AOTY releases ---
+    print(f"\n🔍 Fetching releases from AOTY for your top artists...")
+    releases = get_releases_for_top_artists(top_artists)
+    print(f"\n📀 Total releases found: {len(releases)}")
 
+    # --- Step 3: Score and filter ---
+    print(f"\n⚙️  Scoring and filtering releases...")
+    recommendations = score_releases(releases, heard_albums, top_artists)
 
-client = AOTY()
-scraper = cloudscraper.create_scraper()
+    # --- Step 4: Display results ---
+    display_recommendations(recommendations, limit=10)
 
-top_artists = get_top_artists()
+    print("=" * 50)
+    print("✅ Done!")
+    print("=" * 50)
 
-for artist_name in top_artists:
-    print(f"\n🎤 {artist_name}")
-    artist_id = get_artist_id(artist_name, scraper)
-    if not artist_id:
-        print("  Could not find artist on AOTY")
-        continue
-    albums = client.artist_albums(artist_id)
-    if not albums:
-        print("  No albums found")
-        continue
-    print("  Recommended albums:")
-    for album in albums[:3]:
-        print(f"  - {album}")
+if __name__ == "__main__":
+    main()

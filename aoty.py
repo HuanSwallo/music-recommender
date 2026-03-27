@@ -1,9 +1,7 @@
-from albumoftheyearapi import AOTY
+from shared import scraper, client
 from bs4 import BeautifulSoup
-import cloudscraper
+import time
 
-client = AOTY()
-scraper = cloudscraper.create_scraper() # Use cloudscraper to bypass Cloudflare protection
 
 def get_artist_id(artist_name):
     """
@@ -12,8 +10,12 @@ def get_artist_id(artist_name):
     # Format search query
     search_name = artist_name.lower().replace(' ', '+')
     url = f'https://www.albumoftheyear.org/search/artists/?q={search_name}'
-    response = scraper.get(url)
-    response.raise_for_status()
+    try:
+        response = scraper.get(url)
+        response.raise_for_status()
+    except Exception as e:
+        print(f"  Could not fetch artist '{artist_name}': {e}")
+        return None
 
     # Use beautifulsoup to parse the HTML
     soup = BeautifulSoup(response.text, 'html.parser')
@@ -42,6 +44,7 @@ def get_artist_releases(artist_name):
             for album in albums:
                 releases.append({
                     "artist": artist_name,
+                    "artist_id": artist_id,
                     "name": album,
                     "type": "album",
                     "critic_score": None,
@@ -57,6 +60,7 @@ def get_artist_releases(artist_name):
             for mixtape in mixtapes:
                 releases.append({
                     "artist": artist_name,
+                    "artist_id": artist_id,
                     "name": mixtape,
                     "type": "mixtape",
                     "critic_score": None,
@@ -72,6 +76,7 @@ def get_artist_releases(artist_name):
             for ep in eps:
                 releases.append({
                     "artist": artist_name,
+                    "artist_id": artist_id,
                     "name": ep,
                     "type": "ep",
                     "critic_score": None,
@@ -88,7 +93,8 @@ def get_releases_for_top_artists(top_artists):
         print(f"Fetching releases for {artist}...")
         releases = get_artist_releases(artist)
         print(f"Found {len(releases)} releases for {artist}")
-        all_releases.extend(releases)  
+        all_releases.extend(releases) 
+        time.sleep(2) 
     return all_releases
 
 if __name__ == "__main__":
