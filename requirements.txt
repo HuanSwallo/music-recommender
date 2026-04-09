@@ -1,0 +1,6 @@
+cloudscraper
+album-of-the-year-api
+beautifulsoup4
+requests
+python-dotenv
+

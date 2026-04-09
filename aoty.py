@@ -1,6 +1,8 @@
 from shared import scraper, client
 from bs4 import BeautifulSoup
 import time
+from database import is_artist_cached, save_artist, save_releases, get_cached_releases, init_db
+
 
 
 def get_artist_id(artist_name):
@@ -88,13 +90,25 @@ def get_artist_releases(artist_name):
     return releases
 
 def get_releases_for_top_artists(top_artists):
+    init_db()
     all_releases = []
+
     for artist in top_artists:
-        print(f"Fetching releases for {artist}...")
-        releases = get_artist_releases(artist)
-        print(f"Found {len(releases)} releases for {artist}")
-        all_releases.extend(releases) 
-        time.sleep(2) 
+        # Check cache first
+        if is_artist_cached(artist):
+            print(f"  Loading from cache: {artist}")
+            releases = get_cached_releases(artist)
+        else:
+            print(f"  Scraping AOTY for: {artist}")
+            releases = get_artist_releases(artist)
+            if releases:
+                save_artist(artist, releases[0]['artist_id'])
+                save_releases(releases)
+            time.sleep(3)
+
+        print(f"  Found {len(releases)} releases for {artist}")
+        all_releases.extend(releases)
+
     return all_releases
 
 if __name__ == "__main__":
