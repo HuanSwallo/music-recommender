@@ -1,6 +1,7 @@
 import requests
 import os
 from dotenv import load_dotenv
+from genre_match import match_lastfm_tags_to_aoty_genres
 load_dotenv()
 
 api_key = os.getenv('LASTFM_API_KEY')
@@ -43,7 +44,6 @@ def get_artist_top_tags(artist_name):
         return []
 
 def get_user_genres(top_artists):
-    from genre_match import match_lastfm_tags_to_aoty_genres
     all_genres = set()
     for artist in top_artists:
         tags = get_artist_top_tags(artist)
